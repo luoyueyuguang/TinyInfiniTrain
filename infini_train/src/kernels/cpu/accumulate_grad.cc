@@ -16,7 +16,7 @@ void AdamAccumulateGrad(const std::shared_ptr<Tensor> &grad, const std::shared_p
                         float beta1, float beta2, float eps, int64_t t) {
     // =================================== 作业 ===================================
     // TODO：实现Adam优化器的梯度累积和参数更新
-    // REF:
+    // REF: https://luoying2002.github.io/2024/09/12/ysibbt0p/
     // =================================== 作业 ===================================
     const float bias_correction1 = 1.0f - std::pow(beta1, t);
     const float bias_correction2 = 1.0f - std::pow(beta2, t);

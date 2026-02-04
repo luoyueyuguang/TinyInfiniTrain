@@ -19,7 +19,10 @@ std::shared_ptr<Tensor> MatmulForward(const std::shared_ptr<Tensor> &input, cons
     const auto &input_dims = input->Dims();
     const int64_t bs = std::accumulate(input_dims.rbegin() + 2, input_dims.rend(), 1, std::multiplies<int64_t>{});
     const auto &other_dims = other->Dims();
-    std::for_each(other_dims.begin(), other_dims.end() - 2, [bs](int64_t dim) { CHECK_EQ(dim, bs); });
+
+    for (int64_t i = 0; i < input_dims.size() - 2; ++i) {
+        CHECK_EQ(input_dims[i], other_dims[i]) << "Batch dims must match";
+    }
 
     // get m,n,k
     const int64_t m = input_dims[input_dims.size() - 2];
@@ -49,8 +52,13 @@ MatmulBackward(const std::shared_ptr<Tensor> &input, const std::shared_ptr<Tenso
 
     const auto &input_dims = input->Dims();
     const auto &other_dims = other->Dims();
+    const auto &grad_output_dims = grad_output->Dims();
     const int64_t bs = std::accumulate(input_dims.rbegin() + 2, input_dims.rend(), 1, std::multiplies<int64_t>{});
-    std::for_each(other_dims.begin(), other_dims.end() - 2, [bs](int64_t dim) { CHECK_EQ(dim, bs); });
+
+    for (int64_t i = 0; i < input_dims.size() - 2; ++i) {
+        CHECK_EQ(input_dims[i], other_dims[i]) << "Batch dims must match";
+        CHECK_EQ(input_dims[i], grad_output_dims[i]) << "Batch dims must match";
+    }
     // get m,n,k
     const int64_t m = input_dims[input_dims.size() - 2];
     const int64_t n = other_dims[other_dims.size() - 1];
