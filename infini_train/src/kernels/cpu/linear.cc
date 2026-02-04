@@ -16,7 +16,27 @@ std::shared_ptr<Tensor> MatmulForward(const std::shared_ptr<Tensor> &input, cons
     // REF:
     // =================================== 作业 ===================================
 
-    auto output = std::make_shared<Tensor>();
+    const auto &input_dims = input->Dims();
+    const int64_t bs = std::accumulate(input_dims.rbegin() + 2, input_dims.rend(), 1, std::multiplies<int64_t>{});
+    const auto &other_dims = other->Dims();
+    std::for_each(other_dims.begin(), other_dims.end() - 2,
+                  [bs](int64_t dim) { CHECK_EQ(dim, bs); });
+
+    //get m,n,k
+    const int64_t m = input_dims[input_dims.size() - 2];
+    const int64_t n = other_dims[other_dims.size() - 1];
+    const int64_t k = input_dims[input_dims.size() - 1];
+    CHECK_EQ(k, other_dims[other_dims.size() - 2]);
+
+    auto output_dims = input_dims;
+    output_dims[output_dims.size() - 1] = n;
+    auto output = std::make_shared<Tensor>(output_dims, DataType::kFLOAT32);
+    //use Eigen for matmul
+    for(int64_t b = 0; b < bs; b++){
+        output->EigenMatrix().block(b * m, 0, m, n) = input->EigenMatrix().block(b * m, 0, m, k) * other->EigenMatrix().block(b * k, 0, k, n);
+    }
+
+    
     return {output};
 }
 
@@ -28,8 +48,27 @@ MatmulBackward(const std::shared_ptr<Tensor> &input, const std::shared_ptr<Tenso
     // REF:
     // =================================== 作业 ===================================
 
-    auto grad_input = std::make_shared<Tensor>();
-    auto grad_other = std::make_shared<Tensor>();
+    const auto &input_dims = input->Dims();
+    const auto &other_dims = other->Dims();
+    const int64_t bs = std::accumulate(input_dims.rbegin() + 2, input_dims.rend(), 1, std::multiplies<int64_t>{});
+    std::for_each(other_dims.begin(), other_dims.end() - 2,
+                  [bs](int64_t dim) { CHECK_EQ(dim, bs); });
+    //get m,n,k
+    const int64_t m = input_dims[input_dims.size() - 2];    
+    const int64_t n = other_dims[other_dims.size() - 1];
+    const int64_t k = input_dims[input_dims.size() - 1];
+    CHECK_EQ(k, other_dims[other_dims.size() - 2]);
+
+    auto grad_input = std::make_shared<Tensor>(input_dims, DataType::kFLOAT32);
+    auto grad_other = std::make_shared<Tensor>(other_dims, DataType::kFLOAT32);
+
+    grad_input->EigenMatrix().setZero();
+    grad_other->EigenMatrix().setZero();
+
+     for (int64_t b = 0; b < bs; ++b) {
+        grad_input->EigenMatrix().block(b * m, 0, m, k) = grad_output->EigenMatrix().block(b * m, 0, m, n) * other->EigenMatrix().block(b * k, 0, k, n).transpose();
+        grad_other->EigenMatrix().block(b * k, 0, k, n) = input->EigenMatrix().block(b * m, 0, m, k).transpose() * grad_output->EigenMatrix().block(b * m, 0, m, n);
+    }
     return {grad_input, grad_other};
 }
 
