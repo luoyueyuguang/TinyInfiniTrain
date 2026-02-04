@@ -11,9 +11,8 @@ __global__ void AccumulateGradKernel(const float *grad_ptr, float rate, float *t
 }
 
 __global__ void AdamAccumulateGradKernel(const float *grad_ptr, float *param_ptr, float *m_ptr, float *v_ptr,
-                                        float beta1, float beta2, float eps, float learning_rate,
-                                        float bias_correction1, float bias_correction2,
-                                        size_t num_elements) {
+                                         float beta1, float beta2, float eps, float learning_rate,
+                                         float bias_correction1, float bias_correction2, size_t num_elements) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_elements) {
         float g = grad_ptr[idx];
@@ -54,11 +53,13 @@ void AdamAccumulateGrad(const std::shared_ptr<Tensor> &grad, const std::shared_p
     const float *grad_data = static_cast<const float *>(grad->DataPtr());
     float *param_data = static_cast<float *>(param->DataPtr());
     float *m_data = static_cast<float *>(m->DataPtr());
-    float *v_data = static_cast<float *>(v->DataPtr()); 
+    float *v_data = static_cast<float *>(v->DataPtr());
     size_t num_elements = grad->NumElements();
     int threads_per_block = 256;
     int num_blocks = (num_elements + threads_per_block - 1) / threads_per_block;
-    AdamAccumulateGradKernel<<<num_blocks, threads_per_block>>>(grad_data, param_data, m_data, v_data, beta1, beta2, eps, learning_rate, bias_correction1, bias_correction2, num_elements);
+    AdamAccumulateGradKernel<<<num_blocks, threads_per_block>>>(grad_data, param_data, m_data, v_data, beta1, beta2,
+                                                                eps, learning_rate, bias_correction1, bias_correction2,
+                                                                num_elements);
 }
 } // namespace infini_train::kernels::cuda
 

@@ -86,7 +86,7 @@ Tokenizer::Tokenizer(const std::string &filepath) {
     magic_number_ = BytesToType<uint32_t>(header, 0);
     const uint32_t version_num = BytesToType<uint32_t>(header, 4);
     vocab_size_ = BytesToType<uint32_t>(header, 8);
-    
+
     CHECK(kEotMap.find(magic_number_) != kEotMap.end()) << "Unsupported tokenizer magic: " << magic_number_;
 
     Version version = static_cast<Version>(version_num);
@@ -96,10 +96,10 @@ Tokenizer::Tokenizer(const std::string &filepath) {
         break;
     case Version::kV2: {
         const uint32_t eot_token_2 = BytesToType<uint32_t>(header, 12);
-        eot_token_ = eot_token_2;   
+        eot_token_ = eot_token_2;
         break;
     }
-    default:{
+    default: {
         LOG(FATAL) << "Unsupported tokenizer version: " << version_num;
         return;
     }
@@ -158,7 +158,7 @@ void Tokenizer::GenerateText(infini_train::nn::Module &model, uint32_t batch_siz
         float *probs = static_cast<float *>(logits_cpu.DataPtr()) + (t - 1) * vocab_size;
         float coin = RandomF32(kRngState);
         int next_token = SampleMult(probs, vocab_size, coin);
-        
+
         x = std::make_shared<infini_train::Tensor>(x->To(Device(DeviceType::kCPU, 0))); // calc device->CPU
         auto data_temp = static_cast<int64_t *>(x->DataPtr());
         data_temp[t] = next_token;

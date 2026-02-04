@@ -52,7 +52,7 @@ template <typename T> T BytesToType(const std::vector<uint8_t> &bytes, size_t of
     return value;
 }
 
-//ref:https://github.com/InfiniTensor/InfiniTrain/blob/master/example/common/tiny_shakespeare_dataset.cc
+// ref:https://github.com/InfiniTensor/InfiniTrain/blob/master/example/common/tiny_shakespeare_dataset.cc
 TinyShakespeareFile ReadTinyShakespeareFile(const std::string &path, size_t sequence_length) {
     /* =================================== 作业 ===================================
        TODO：实现二进制数据集文件解析
@@ -75,9 +75,8 @@ TinyShakespeareFile ReadTinyShakespeareFile(const std::string &path, size_t sequ
     const int num_sequences = num_tokens / sequence_length;
     result.dims.assign({num_sequences, static_cast<int64_t>(sequence_length)});
 
-    const int data_size_in_bytes
-        = kTypeToSize.at(result.type)
-        * std::accumulate(result.dims.begin(), result.dims.end(), 1, std::multiplies<int>());
+    const int data_size_in_bytes = kTypeToSize.at(result.type)
+                                 * std::accumulate(result.dims.begin(), result.dims.end(), 1, std::multiplies<int>());
     // shape: (num_seq, seq_len), dtype: int64
     result.tensor = infini_train::Tensor(result.dims, DataType::kINT64);
     int64_t *dst = static_cast<int64_t *>(result.tensor.DataPtr());
@@ -104,10 +103,10 @@ TinyShakespeareFile ReadTinyShakespeareFile(const std::string &path, size_t sequ
 }
 } // namespace
 
-TinyShakespeareDataset::TinyShakespeareDataset(const std::string &filepath, size_t sequence_length):
-    text_file_(ReadTinyShakespeareFile(filepath, sequence_length)),
-    sequence_length_(sequence_length), sequence_size_in_bytes_(kTypeToSize.at(text_file_.type) * sequence_length_),
-    num_samples_(text_file_.dims[0] - 1) {
+TinyShakespeareDataset::TinyShakespeareDataset(const std::string &filepath, size_t sequence_length)
+    : text_file_(ReadTinyShakespeareFile(filepath, sequence_length)), sequence_length_(sequence_length),
+      sequence_size_in_bytes_(kTypeToSize.at(text_file_.type) * sequence_length_),
+      num_samples_(text_file_.dims[0] - 1) {
     // =================================== 作业 ===================================
     // TODO：初始化数据集实例
     // HINT: 调用ReadTinyShakespeareFile加载数据文件

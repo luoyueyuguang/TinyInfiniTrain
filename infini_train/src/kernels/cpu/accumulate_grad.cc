@@ -24,7 +24,7 @@ void AdamAccumulateGrad(const std::shared_ptr<Tensor> &grad, const std::shared_p
     const float *grad_data = static_cast<const float *>(grad->DataPtr());
     float *param_data = static_cast<float *>(param->DataPtr());
     float *m_data = static_cast<float *>(m->DataPtr());
-    float *v_data = static_cast<float *>(v->DataPtr()); 
+    float *v_data = static_cast<float *>(v->DataPtr());
     for (int64_t idx = 0; idx < grad->NumElements(); ++idx) {
         float g = grad_data[idx];
         float mdata = beta1 * m_data[idx] + (1 - beta1) * g;

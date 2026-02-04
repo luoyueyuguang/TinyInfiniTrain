@@ -38,18 +38,16 @@ std::shared_ptr<Tensor> MatmulForward(const std::shared_ptr<Tensor> &input, cons
     CHECK_EQ(input_dims.size(), other_dims.size());
 
     const int64_t bs = std::accumulate(input_dims.rbegin() + 2, input_dims.rend(), 1, std::multiplies<int64_t>{});
-    for(int64_t i = 0; i < input_dims.size() - 2; i++) {
-        CHECK_EQ(input_dims[i], other_dims[i]);
-    }
-    //get m,n,k
+    for (int64_t i = 0; i < input_dims.size() - 2; i++) { CHECK_EQ(input_dims[i], other_dims[i]); }
+    // get m,n,k
     const int64_t m = input_dims[input_dims.size() - 2];
     const int64_t k = input_dims[input_dims.size() - 1];
     const int64_t n = other_dims[other_dims.size() - 1];
 
     CHECK_EQ(input_dims[input_dims.size() - 1], other_dims[other_dims.size() - 2]);
-    //check dims
+    // check dims
     CHECK_EQ(other_dims[other_dims.size() - 2], k);
-    auto dtype = input -> Dtype();
+    auto dtype = input->Dtype();
     std::vector<int64_t> output_dims = input_dims;
     output_dims[output_dims.size() - 1] = n;
     auto output = std::make_shared<Tensor>(output_dims, dtype, input->GetDevice());
@@ -65,7 +63,7 @@ std::shared_ptr<Tensor> MatmulForward(const std::shared_ptr<Tensor> &input, cons
     int64_t batch_stride_a = n * k;
     int64_t batch_stride_b = k * m;
     int64_t batch_stride_c = n * m;
-    
+
     // CUBLAS_CHECK(cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha,
     //                             static_cast<const float *>(other->DataPtr()), lda, batch_stride_a,
     //                             static_cast<const float *>(input->DataPtr()), ldb, batch_stride_b,
@@ -74,21 +72,21 @@ std::shared_ptr<Tensor> MatmulForward(const std::shared_ptr<Tensor> &input, cons
     //                             bs));
     switch (dtype) {
     case DataType::kFLOAT32:
-        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha,
-                                   other->DataPtr(), CUDA_R_32F, lda, batch_stride_a, input->DataPtr(),
-                                   CUDA_R_32F, ldb, batch_stride_b, &beta, output->DataPtr(), CUDA_R_32F, ldc,
-                                   batch_stride_c, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
+        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, other->DataPtr(),
+                                                CUDA_R_32F, lda, batch_stride_a, input->DataPtr(), CUDA_R_32F, ldb,
+                                                batch_stride_b, &beta, output->DataPtr(), CUDA_R_32F, ldc,
+                                                batch_stride_c, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
         break;
     case DataType::kBFLOAT16:
-        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha,
-                                   other->DataPtr(), CUDA_R_16BF, lda, batch_stride_a, input->DataPtr(),
-                                   CUDA_R_16BF, ldb, batch_stride_b, &beta, output->DataPtr(), CUDA_R_16BF, ldc,
-                                   batch_stride_c, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
+        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, other->DataPtr(),
+                                                CUDA_R_16BF, lda, batch_stride_a, input->DataPtr(), CUDA_R_16BF, ldb,
+                                                batch_stride_b, &beta, output->DataPtr(), CUDA_R_16BF, ldc,
+                                                batch_stride_c, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
         break;
     default:
         LOG(FATAL) << "Unsupported data type in MatmulForward CUDA kernel.\n";
     }
-    CUBLAS_CHECK(cublasDestroy(handle));       
+    CUBLAS_CHECK(cublasDestroy(handle));
     return output;
 }
 
@@ -110,7 +108,7 @@ MatmulBackward(const std::shared_ptr<Tensor> &input, const std::shared_ptr<Tenso
         other:     [..., K, N]
         input:     [..., M, K]
     */
-    
+
     const auto &input_dims = input->Dims();
     const auto &other_dims = other->Dims();
     const auto &grad_output_dims = grad_output->Dims();
@@ -122,7 +120,7 @@ MatmulBackward(const std::shared_ptr<Tensor> &input, const std::shared_ptr<Tenso
     CHECK_EQ(N, grad_output_dims[grad_output_dims.size() - 1]);
     auto bs = std::accumulate(input_dims.rbegin() + 2, input_dims.rend(), 1, std::multiplies<int64_t>{});
     constexpr float alpha = 1.0f, beta = 0.0f;
-    auto dtype = input -> Dtype();
+    auto dtype = input->Dtype();
 
     /**
         Column major:
@@ -130,20 +128,22 @@ MatmulBackward(const std::shared_ptr<Tensor> &input, const std::shared_ptr<Tenso
     */
     cublasHandle_t handle;
     CUBLAS_CHECK(cublasCreate(&handle));
-    
+
     // grad_input^T = other * grad_output^T
     switch (dtype) {
-    case DataType::kFLOAT32: 
-        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_T, CUBLAS_OP_N, K, M, N, &alpha, other->DataPtr(), CUDA_R_32F, N,
-                                   K * N, grad_output->DataPtr(), CUDA_R_32F, N, N * M, &beta, grad_input->DataPtr(),
-                                   CUDA_R_32F, K, M * K, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
+    case DataType::kFLOAT32:
+        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_T, CUBLAS_OP_N, K, M, N, &alpha, other->DataPtr(),
+                                                CUDA_R_32F, N, K * N, grad_output->DataPtr(), CUDA_R_32F, N, N * M,
+                                                &beta, grad_input->DataPtr(), CUDA_R_32F, K, M * K, bs, CUDA_R_32F,
+                                                CUBLAS_GEMM_DEFAULT));
         break;
     case DataType::kBFLOAT16:
-        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_T, CUBLAS_OP_N, K, M, N, &alpha, other->DataPtr(), CUDA_R_16BF, N,
-                                   K * N, grad_output->DataPtr(), CUDA_R_16BF, N, N * M, &beta, grad_input->DataPtr(),
-                                   CUDA_R_16BF, K, M * K, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
+        CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_T, CUBLAS_OP_N, K, M, N, &alpha, other->DataPtr(),
+                                                CUDA_R_16BF, N, K * N, grad_output->DataPtr(), CUDA_R_16BF, N, N * M,
+                                                &beta, grad_input->DataPtr(), CUDA_R_16BF, K, M * K, bs, CUDA_R_32F,
+                                                CUBLAS_GEMM_DEFAULT));
         break;
-    default: 
+    default:
         LOG(FATAL) << "Unsupported data type in MatmulBackward CUDA kernel.\n";
     }
 
@@ -154,16 +154,16 @@ MatmulBackward(const std::shared_ptr<Tensor> &input, const std::shared_ptr<Tenso
                                    CUDA_R_32F, N, N * M, input->DataPtr(), CUDA_R_32F, K, M * K, &beta,
                                    grad_other->DataPtr(), CUDA_R_32F, N, K * N, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT);
         break;
-    case DataType::kBFLOAT16: 
+    case DataType::kBFLOAT16:
         cublasGemmStridedBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_T, N, K, M, &alpha, grad_output->DataPtr(),
                                    CUDA_R_16BF, N, N * M, input->DataPtr(), CUDA_R_16BF, K, M * K, &beta,
                                    grad_other->DataPtr(), CUDA_R_16BF, N, K * N, bs, CUDA_R_32F, CUBLAS_GEMM_DEFAULT);
         break;
-    default: 
+    default:
         LOG(FATAL) << "Unsupported data type in MatmulBackward CUDA kernel.\n";
     }
 
-    CUBLAS_CHECK(cublasDestroy(handle));       
+    CUBLAS_CHECK(cublasDestroy(handle));
 
     return {grad_input, grad_other};
 }

@@ -286,9 +286,7 @@ std::shared_ptr<Tensor> Tensor::Flatten(int64_t start, int64_t end) {
     end = end < 0 ? end + dims_.size() : end;
     std::vector<int64_t> new_shape;
     new_shape.insert(new_shape.end(), dims_.begin(), dims_.begin() + start);
-    new_shape.push_back(
-        std::accumulate(dims_.begin() + start, dims_.begin() + end + 1, 1, std::multiplies<int64_t>())
-    );
+    new_shape.push_back(std::accumulate(dims_.begin() + start, dims_.begin() + end + 1, 1, std::multiplies<int64_t>()));
     new_shape.insert(new_shape.end(), dims_.begin() + end + 1, dims_.end());
 
     return Contiguous()->View(new_shape);

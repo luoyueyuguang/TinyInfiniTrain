@@ -22,7 +22,7 @@ public:
 
         using FuncT = RetT (*)(ArgsT...);
         // TODO: 实现函数调用逻辑
-        //区分是否为void返回类型
+        // 区分是否为void返回类型
         if constexpr (std::is_void<RetT>::value) {
             reinterpret_cast<FuncT>(func_ptr_)(args...);
             return;
@@ -55,7 +55,7 @@ public:
         // TODO：实现kernel注册机制
         // 功能描述：将kernel函数与设备类型、名称绑定
         // =================================== 作业 ===================================
-       CHECK(!key_to_kernel_map_.contains(key))
+        CHECK(!key_to_kernel_map_.contains(key))
             << "Kernel already registered: " << key.second << " on device: " << static_cast<int>(key.first);
         key_to_kernel_map_.emplace(key, KernelFunction(std::forward<FuncT>(kernel)));
     }
@@ -65,13 +65,12 @@ private:
 };
 } // namespace infini_train
 
- // =================================== 作业 ===================================
- // TODO：实现自动注册宏
- // 功能描述：在全局静态区注册kernel，避免显式初始化代码
- // =================================== 作业 ===================================
+// =================================== 作业 ===================================
+// TODO：实现自动注册宏
+// 功能描述：在全局静态区注册kernel，避免显式初始化代码
+// =================================== 作业 ===================================
 #define REGISTER_KERNEL(device, kernel_name, kernel_func)                                                              \
-     static const bool _##kernel_name##_registered##__COUNTER__ = []() {                                               \
+    static const bool _##kernel_name##_registered##__COUNTER__ = []() {                                                \
         infini_train::Dispatcher::Instance().Register({device, #kernel_name}, kernel_func);                            \
         return true;                                                                                                   \
     }();
-                                                                                                              
