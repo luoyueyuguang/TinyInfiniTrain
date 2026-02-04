@@ -78,6 +78,43 @@ Tokenizer::Tokenizer(const std::string &filepath) {
     | magic(4B) | version(4B) | vocab_size(4B) | reserved(1012B) | token词表数据       |
     ----------------------------------------------------------------------------------
     ===================================== 作业 ===================================== */
+    CHECK(std::filesystem::exists(filepath)) << "File not found: " << filepath;
+
+    std::ifstream ifs(filepath, std::ios::binary);
+    const auto header = ReadSeveralBytesFromIfstream(1024, &ifs);
+
+    magic_number_ = BytesToType<uint32_t>(header, 0);
+    const uint32_t version_num = BytesToType<uint32_t>(header, 4);
+    vocab_size_ = BytesToType<uint32_t>(header, 8);
+    
+    CHECK(kEotMap.find(magic_number_) != kEotMap.end()) << "Unsupported tokenizer magic: " << magic_number_;
+
+    Version version = static_cast<Version>(version_num);
+    switch (version) {
+    case Version::kV1:
+        eot_token_ = kEotMap.at(magic_number_);
+        break;
+    case Version::kV2: {
+        const uint32_t eot_token_2 = BytesToType<uint32_t>(header, 12);
+        eot_token_ = eot_token_2;   
+        break;
+    }
+    default:{
+        LOG(FATAL) << "Unsupported tokenizer version: " << version_num;
+        return;
+    }
+    }
+
+    token_table_.resize(vocab_size_);
+    for (uint32_t i = 0; i < vocab_size_; ++i) {
+        uint8_t length;
+        ifs.read(reinterpret_cast<char *>(&length), sizeof(length));
+
+        std::vector<char> buffer(length);
+        ifs.read(buffer.data(), length);
+
+        token_table_[i] = std::string(buffer.data(), length);
+    }
 }
 
 std::string Tokenizer::Decode(uint32_t token_id) const {
@@ -85,7 +122,8 @@ std::string Tokenizer::Decode(uint32_t token_id) const {
     TODO：实现token_id到文本的转换
     功能描述：根据token_id返回对应的文本片段
     ===================================== 作业 ===================================== */
-    return "";
+    CHECK_LT(token_id, vocab_size_);
+    return token_table_[token_id];
 }
 
 void Tokenizer::GenerateText(infini_train::nn::Module &model, uint32_t batch_size, uint32_t sequence_length,
@@ -111,6 +149,20 @@ void Tokenizer::GenerateText(infini_train::nn::Module &model, uint32_t batch_siz
         TODO：实现单步文本生成逻辑
         HINT：调用model.Forward推理获取logits，根据推理结果进行随机采样，调用Decode获取文本结果
         ===================================== 作业 ===================================== */
+        // TODO(jym): use no_grad forward later
+        x = std::make_shared<infini_train::Tensor>(x->To(device)); // calc CPU->device
+        auto logits = model.Forward({x})[0];
+        auto logits_orignal = nn::function::Softmax(logits, -1);
+        auto logits_cpu = logits_orignal->To(Device(DeviceType::kCPU, 0));
+        auto vocab_size = logits->Dims()[2];
+        float *probs = static_cast<float *>(logits_cpu.DataPtr()) + (t - 1) * vocab_size;
+        float coin = RandomF32(kRngState);
+        int next_token = SampleMult(probs, vocab_size, coin);
+        
+        x = std::make_shared<infini_train::Tensor>(x->To(Device(DeviceType::kCPU, 0))); // calc device->CPU
+        auto data_temp = static_cast<int64_t *>(x->DataPtr());
+        data_temp[t] = next_token;
+        std::cout << Decode(next_token);
     }
     std::cout << std::endl;
 }
