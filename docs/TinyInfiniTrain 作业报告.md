@@ -287,7 +287,8 @@ MatmulBackward(const std::shared_ptr<Tensor> &input, const std::shared_ptr<Tenso
 ```
 
 #### 解决思路
-仿照Linear实现及其他实现，实现Matmul
+仿照Linear实现及其他实现，实现Matmul。CPU使用Eigen库实现。
+GPU实现与CPU实现类似，使用CUBLAS库实现。
 
 
 #### 遇到问题
@@ -440,7 +441,7 @@ void Tensor::Backward(std::shared_ptr<Tensor> gradient, bool retain_graph, bool 
 ```
 
 #### 解决思路
-仿照InfiniTrain的实现，进行实现
+仿照InfiniTrain的实现，进行实现。flat_tensor是指将张量展平为1维张量。start和end是指展平后的起始和结束索引。所以对维度进行加和，得到展平后的索引。
 
 
 #### 遇到问题
