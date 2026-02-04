@@ -64,12 +64,6 @@ std::shared_ptr<Tensor> MatmulForward(const std::shared_ptr<Tensor> &input, cons
     int64_t batch_stride_b = k * m;
     int64_t batch_stride_c = n * m;
 
-    // CUBLAS_CHECK(cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha,
-    //                             static_cast<const float *>(other->DataPtr()), lda, batch_stride_a,
-    //                             static_cast<const float *>(input->DataPtr()), ldb, batch_stride_b,
-    //                             &beta,
-    //                             static_cast<float *>(output->DataPtr()), ldc, batch_stride_c,
-    //                             bs));
     switch (dtype) {
     case DataType::kFLOAT32:
         CUBLAS_CHECK(cublasGemmStridedBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, other->DataPtr(),

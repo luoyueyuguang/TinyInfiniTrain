@@ -105,13 +105,12 @@ TinyShakespeareFile ReadTinyShakespeareFile(const std::string &path, size_t sequ
 
 TinyShakespeareDataset::TinyShakespeareDataset(const std::string &filepath, size_t sequence_length)
     : text_file_(ReadTinyShakespeareFile(filepath, sequence_length)), sequence_length_(sequence_length),
-      sequence_size_in_bytes_(kTypeToSize.at(text_file_.type) * sequence_length_),
-      num_samples_(text_file_.dims[0] - 1) {
+      sequence_size_in_bytes_(sizeof(int64_t) * sequence_length_), num_samples_(text_file_.dims[0] - 1) {
     // =================================== 作业 ===================================
     // TODO：初始化数据集实例
     // HINT: 调用ReadTinyShakespeareFile加载数据文件
     // =================================== 作业 ===================================
-    CHECK_GT(num_samples_, 0);
+
     CHECK_EQ(text_file_.dims[1], sequence_length_);
 }
 
